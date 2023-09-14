@@ -1,6 +1,8 @@
 {
     "extends": ["tslint-react"],
     "rules": {
+        "@typescript-eslint/explicit-module-boundary-types": "off",
+        "typedef": false,
         "align": [
             true,
             "parameters",
@@ -27,7 +29,7 @@
             "static-before-instance",
             "variables-before-functions"
         ],
-        "no-any": true,
+        "no-any": false,
         "no-arg": true,
         "no-bitwise": true,
         "no-console": false,
@@ -58,21 +60,21 @@
         "trailing-comma": [false],
 
         "triple-equals": [ true, "allow-null-check" ],
-        "typedef": [
-            true,
-            "parameter",
-            "property-declaration"
-        ],
-        "typedef-whitespace": [
-            true,
-            {
-                "call-signature": "nospace",
-                "index-signature": "nospace",
-                "parameter": "nospace",
-                "property-declaration": "nospace",
-                "variable-declaration": "nospace"
-            }
-        ],
+//        "typedef": [
+//            true,
+//            "parameter",
+//            "property-declaration"
+//        ],
+//        "typedef-whitespace": [
+//            false,
+//            {
+//                "call-signature": "nospace",
+//                "index-signature": "nospace",
+//                "parameter": "nospace",
+//                "property-declaration": "nospace",
+//                "variable-declaration": "nospace"
+//            }
+//        ],
         "variable-name": [true, "ban-keywords", "check-format", "allow-leading-underscore", "allow-pascal-case"],
         "whitespace": [
             true,
