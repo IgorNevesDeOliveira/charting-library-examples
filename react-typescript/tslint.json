@@ -4,7 +4,7 @@
         "@typescript-eslint/explicit-module-boundary-types": "off",
         "typedef": false,
         "align": [
-            true,
+            false,
             "parameters",
             "arguments",
             "statements"
@@ -86,7 +86,7 @@
             "check-type",
             "check-typecast"
         ],
-        "jsx-alignment": true,
+        "jsx-alignment": false,
         "jsx-ban-props": false,
         "jsx-boolean-value": false,
         "jsx-curly-spacing": [true, "always"],

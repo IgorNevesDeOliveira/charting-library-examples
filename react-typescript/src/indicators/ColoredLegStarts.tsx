@@ -1,12 +1,15 @@
 import {
-    DeepWriteable, IContext, IPineStudyResult,
+    DeepWriteable,
+    IContext,
+    IPineStudyResult,
     LibraryPineStudy,
-    OhlcStudyPlotStyle, PineJS,
+    OhlcStudyPlotStyle,
+    PineJS,
     RawStudyMetaInfoId,
     StudyPlotType
 } from '../charting_library';
 
-export const coloredLegStart = (pineJS: PineJS) => ({
+export const coloredLegStart = (pineJS: PineJS, coloredTimestamps: Set<number>) => ({
     name: 'Advanced Coloring Candles',
         metainfo: {
     _metainfoVersion: 51,
@@ -137,13 +140,6 @@ export const coloredLegStart = (pineJS: PineJS) => ({
     inputs: [],
 },
     constructor: function (this: LibraryPineStudy<IPineStudyResult>) {
-        let coloredTimestamps: number[] = []; // Initially empty
-
-        // Fetch data when the study is created
-        fetchData().then(data => {
-            coloredTimestamps = data;
-        });
-
         this.main = function (context: IContext, inputCallback) {
             this._context = context;
             this._input = inputCallback;
@@ -155,9 +151,10 @@ export const coloredLegStart = (pineJS: PineJS) => ({
             const l = pineJS.Std.low(this._context);
             const c = pineJS.Std.close(this._context);
             const time = pineJS.Std.time(this._context);
-            console.log(time);
             let colour;
-            if (coloredTimestamps.includes(time)) {
+
+            if (coloredTimestamps.has(time)) {
+                console.log(time);
                 colour = 1;
             } else {
                 colour = 0;
@@ -175,7 +172,3 @@ export const coloredLegStart = (pineJS: PineJS) => ({
         };
     },
 });
-
-async function fetchData() {
-    return [1681738200000];
-}
