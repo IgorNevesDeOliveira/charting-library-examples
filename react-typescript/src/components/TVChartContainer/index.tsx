@@ -6,13 +6,13 @@ import {
 	LanguageCode,
 	ResolutionString,
 	// RawStudyMetaInfoId,
-	CustomIndicator,
+	CustomIndicator, IChartingLibraryWidget,
 	// LibraryPineStudy,
 	// IPineStudyResult, DeepWriteable, OhlcStudyPlotStyle, StudyPlotType, IContext
 } from '../../charting_library';
 import * as React from 'react';
-import { coloredLegStart } from '../../indicators/ColoredLegStarts';
-
+// import { coloredLegStart } from '../../indicators/ColoredLegStarts';
+import { arrowLegStart } from '../../indicators/ArrowLegStarts';
 export interface ChartContainerProps {
 	symbol: ChartingLibraryWidgetOptions['symbol'];
 	interval: ChartingLibraryWidgetOptions['interval'];
@@ -53,15 +53,29 @@ export const TVChartContainer = () => {
 		studiesOverrides: {},
 	};
 	/* eslint-disable align */
-	const [coloredTimestamps, setColoredTimestamps] = useState<Set<number>>(new Set());
+	const [legStartTimestamps, setLegStartTimestamps] = useState<Set<number>>(new Set());
 	useEffect(() => {
 		fetch('http://localhost:8090/leg-start')
 			.then((response) => response.json())
 			.then((result) => {
 				const numericResult = new Set(Object.values(result).map(Number));
-				setColoredTimestamps(numericResult);
+				setLegStartTimestamps(numericResult);
 			});
 	}, []);
+
+	const tvWidgetRef = useRef<IChartingLibraryWidget | null>(null);
+
+	const createShapeCallback = (time: number) => {
+		if (tvWidgetRef.current && tvWidgetRef.current.chart()) {
+			tvWidgetRef.current.chart().createShape(
+				{ time: time / 1000 },
+				{
+					shape: 'arrow_up',
+					text: 'Arrow!'
+				}
+			);
+		}
+	};
 
 	useEffect(() => {
 		const widgetOptions: ChartingLibraryWidgetOptions = {
@@ -84,14 +98,14 @@ export const TVChartContainer = () => {
 			studies_overrides: defaultProps.studiesOverrides,
 			custom_indicators_getter: PineJS => {
 				return Promise.resolve<CustomIndicator[]>([
-
-					/* Advanced Colouring Candles */
-					coloredLegStart(PineJS, coloredTimestamps) as CustomIndicator
+					// coloredLegStart(PineJS, legStartTimestamps) as CustomIndicator,
+					arrowLegStart(PineJS, legStartTimestamps, createShapeCallback) as CustomIndicator
 				]);
 			},
 		};
 
 		const tvWidget = new widget(widgetOptions);
+		tvWidgetRef.current = tvWidget;
 		tvWidget.onChartReady(() => {
 			tvWidget.headerReady().then(() => {
 				const button = tvWidget.createButton();
@@ -111,7 +125,7 @@ export const TVChartContainer = () => {
 		return () => {
 			tvWidget.remove();
 		};
-	}, [coloredTimestamps]);
+	}, [legStartTimestamps]);
 
 	return (
 		<div
