@@ -1,12 +1,12 @@
 import {
-    DeepWriteable,
+    DeepWriteable, IChartingLibraryWidget,
     IContext,
     IPineStudyResult,
     LibraryPineStudy, OhlcStudyPlotStyle,
     PineJS, RawStudyMetaInfoId, StudyPlotType
 } from '../charting_library';
 
-export const arrowLegStart = (pineJS: PineJS, legStartTimestamps: Set<number>, callbackFunction: (time: number) => void) => ({
+export const arrowLegStart = (pineJS: PineJS, legStartTimestamps: Set<number>, callbackFunction: IChartingLibraryWidget | null) => ({
     name: 'Arrow',
     metainfo: {
         _metainfoVersion: 51,
@@ -97,11 +97,14 @@ export const arrowLegStart = (pineJS: PineJS, legStartTimestamps: Set<number>, c
             const l = pineJS.Std.low(this._context);
             const c = pineJS.Std.close(this._context);
 
-            console.log(time);
-            if (legStartTimestamps.has(time)) {
-                callbackFunction(time);
+            if (callbackFunction != null && legStartTimestamps.has(time)) {
+                callbackFunction.chart().createShape(
+                    { time: time / 1000 },
+                    {
+                        shape: 'arrow_down',
+                        text: 'Arrow!'
+                    });
             }
-
             return [o, h, l, c];
         };
     },

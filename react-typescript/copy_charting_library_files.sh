@@ -6,7 +6,7 @@ remove_if_directory_exists() {
 
 BRANCH="master";
 
-REPOSITORY='https://github.com/tradingview/charting_library/'
+REPOSITORY='https://github.com/StonkOverflow/charting_library'
 
 LATEST_HASH=$(git ls-remote $REPOSITORY $BRANCH | grep -Eo '^[[:alnum:]]+')
 

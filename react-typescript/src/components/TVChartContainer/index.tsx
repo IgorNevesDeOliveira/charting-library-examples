@@ -12,7 +12,7 @@ import {
 } from '../../charting_library';
 import * as React from 'react';
 // import { coloredLegStart } from '../../indicators/ColoredLegStarts';
-import { arrowLegStart } from '../../indicators/ArrowLegStarts';
+// import { arrowLegStart } from '../../indicators/ArrowLegStarts';
 export interface ChartContainerProps {
 	symbol: ChartingLibraryWidgetOptions['symbol'];
 	interval: ChartingLibraryWidgetOptions['interval'];
@@ -39,6 +39,49 @@ const getLanguageFromURL = (): LanguageCode | null => {
 export const TVChartContainer = () => {
 	const chartContainerRef = useRef<HTMLDivElement>() as React.MutableRefObject<HTMLInputElement>;
 
+	const [selectedIndicator, setSelectedIndicator] = useState('');
+	const tvWidgetRef = useRef<IChartingLibraryWidget | null>(null);
+
+	/* eslint-disable align */
+	const [legStartTimestamps, setLegStartTimestamps] = useState<Set<number>>(new Set());
+	useEffect(() => {
+		fetch('http://localhost:8090/imbalances')
+			.then((response) => response.json())
+			.then((result) => {
+				const numericResult = new Set(Object.values(result).map(Number));
+				setLegStartTimestamps(numericResult);
+			});
+	}, []);
+
+	const applyIndicatorLogic = (tvWidget: IChartingLibraryWidget) => {
+		switch (selectedIndicator) {
+			case 'arrow':
+				legStartTimestamps.forEach(timestamp => {
+					tvWidget.chart().createShape(
+						{ time: timestamp / 1000 },
+						{
+							shape: 'arrow_down',
+							text: 'Arrow!'
+						}
+					);
+				});
+				break;
+			default: console.warn(`Unknown indicator: ${selectedIndicator}`);
+		}
+	};
+
+	useEffect(() => {
+		const tvWidget = tvWidgetRef.current;
+		if (tvWidget && selectedIndicator) {
+			applyIndicatorLogic(tvWidget);
+		}
+	}, [selectedIndicator, legStartTimestamps]);
+
+	const handleIndicatorChange = (indicator: string) => {
+		setSelectedIndicator(indicator);
+		// applyIndicatorLogic(indicator);
+	};
+
 	const defaultProps: Omit<ChartContainerProps, 'container'> = {
 		symbol: 'US500',
 		interval: 'D' as ResolutionString,
@@ -51,30 +94,6 @@ export const TVChartContainer = () => {
 		fullscreen: false,
 		autosize: true,
 		studiesOverrides: {},
-	};
-	/* eslint-disable align */
-	const [legStartTimestamps, setLegStartTimestamps] = useState<Set<number>>(new Set());
-	useEffect(() => {
-		fetch('http://localhost:8090/leg-start')
-			.then((response) => response.json())
-			.then((result) => {
-				const numericResult = new Set(Object.values(result).map(Number));
-				setLegStartTimestamps(numericResult);
-			});
-	}, []);
-
-	const tvWidgetRef = useRef<IChartingLibraryWidget | null>(null);
-
-	const createShapeCallback = (time: number) => {
-		if (tvWidgetRef.current && tvWidgetRef.current.chart()) {
-			tvWidgetRef.current.chart().createShape(
-				{ time: time / 1000 },
-				{
-					shape: 'arrow_up',
-					text: 'Arrow!'
-				}
-			);
-		}
 	};
 
 	useEffect(() => {
@@ -99,7 +118,7 @@ export const TVChartContainer = () => {
 			custom_indicators_getter: PineJS => {
 				return Promise.resolve<CustomIndicator[]>([
 					// coloredLegStart(PineJS, legStartTimestamps) as CustomIndicator,
-					arrowLegStart(PineJS, legStartTimestamps, createShapeCallback) as CustomIndicator
+					// arrowLegStart(PineJS, legStartTimestamps, tvWidgetRef.current) as CustomIndicator
 				]);
 			},
 		};
@@ -108,6 +127,7 @@ export const TVChartContainer = () => {
 		tvWidgetRef.current = tvWidget;
 		tvWidget.onChartReady(() => {
 			tvWidget.headerReady().then(() => {
+				applyIndicatorLogic(tvWidget);
 				const button = tvWidget.createButton();
 				button.setAttribute('title', 'Click to show a notification popup');
 				button.classList.add('apply-common-tooltip');
@@ -128,9 +148,15 @@ export const TVChartContainer = () => {
 	}, [legStartTimestamps]);
 
 	return (
-		<div
-			ref={ chartContainerRef }
-			className={ 'TVChartContainer' }
-		/>
+		<div>
+			<div>
+				<select onChange={ (e) => handleIndicatorChange(e.target.value) }>
+					<option value="">Select Indicator</option>
+					<option value="arrow">Arrow Indicator</option>
+					<option value="line">Line Indicator</option>
+				</select>
+			</div>
+			<div ref={ chartContainerRef } className={ 'TVChartContainer' } />
+		</div>
 	);
 };
