@@ -1,18 +1,14 @@
+import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import './index.css';
 import {
-	widget,
 	ChartingLibraryWidgetOptions,
+	IChartingLibraryWidget,
 	LanguageCode,
 	ResolutionString,
-	// RawStudyMetaInfoId,
-	CustomIndicator, IChartingLibraryWidget,
-	// LibraryPineStudy,
-	// IPineStudyResult, DeepWriteable, OhlcStudyPlotStyle, StudyPlotType, IContext
+	widget,
 } from '../../charting_library';
-import * as React from 'react';
-// import { coloredLegStart } from '../../indicators/ColoredLegStarts';
-// import { arrowLegStart } from '../../indicators/ArrowLegStarts';
+
 export interface ChartContainerProps {
 	symbol: ChartingLibraryWidgetOptions['symbol'];
 	interval: ChartingLibraryWidgetOptions['interval'];
@@ -40,47 +36,42 @@ export const TVChartContainer = () => {
 	const chartContainerRef = useRef<HTMLDivElement>() as React.MutableRefObject<HTMLInputElement>;
 
 	const [selectedIndicator, setSelectedIndicator] = useState('');
-	const tvWidgetRef = useRef<IChartingLibraryWidget | null>(null);
+	// const tvWidgetRef = useRef<IChartingLibraryWidget | null>(null);
 
 	/* eslint-disable align */
-	const [legStartTimestamps, setLegStartTimestamps] = useState<Set<number>>(new Set());
-	useEffect(() => {
-		fetch('http://localhost:8090/imbalances')
-			.then((response) => response.json())
-			.then((result) => {
-				const numericResult = new Set(Object.values(result).map(Number));
-				setLegStartTimestamps(numericResult);
-			});
-	}, []);
+	// const signalTimestamps = useRef<Set<number>>(new Set());
+	const currentResolution = useRef<string>('');
 
 	const applyIndicatorLogic = (tvWidget: IChartingLibraryWidget) => {
 		switch (selectedIndicator) {
-			case 'arrow':
-				legStartTimestamps.forEach(timestamp => {
-					tvWidget.chart().createShape(
-						{ time: timestamp / 1000 },
-						{
-							shape: 'arrow_down',
-							text: 'Arrow!'
-						}
-					);
+			case 'imbalances':
+				tvWidget.chart().removeAllShapes();
+				fetch(`http://localhost:8090/signal?signalName=${selectedIndicator}&resolution=${currentResolution.current}`)
+					.then((response) => response.json())
+					.then((result) => {
+						return new Set(Object.values(result).map(Number));
+					}).then((timestampList) => {
+					timestampList.forEach(timestamp => {
+						console.log(timestamp);
+						tvWidget.chart().createShape(
+							{time: timestamp / 1000},
+							{
+								shape: 'arrow_down',
+								text: 'Arrow!'
+							}
+						);
+					});
 				});
 				break;
-			default: console.warn(`Unknown indicator: ${selectedIndicator}`);
+			default:
+				console.warn(`Unknown indicator: ${selectedIndicator}`);
 		}
 	};
 
-	useEffect(() => {
-		const tvWidget = tvWidgetRef.current;
-		if (tvWidget && selectedIndicator) {
-			applyIndicatorLogic(tvWidget);
-		}
-	}, [selectedIndicator, legStartTimestamps]);
-
-	const handleIndicatorChange = (indicator: string) => {
-		setSelectedIndicator(indicator);
-		// applyIndicatorLogic(indicator);
-	};
+	// useEffect(() => {
+	// 	console.log('test');
+	// 	applyIndicatorLogic(tvWidgetRef.current);
+	// }, [selectedIndicator]);
 
 	const defaultProps: Omit<ChartContainerProps, 'container'> = {
 		symbol: 'US500',
@@ -114,20 +105,17 @@ export const TVChartContainer = () => {
 			user_id: defaultProps.userId,
 			fullscreen: defaultProps.fullscreen,
 			autosize: defaultProps.autosize,
-			studies_overrides: defaultProps.studiesOverrides,
-			custom_indicators_getter: PineJS => {
-				return Promise.resolve<CustomIndicator[]>([
-					// coloredLegStart(PineJS, legStartTimestamps) as CustomIndicator,
-					// arrowLegStart(PineJS, legStartTimestamps, tvWidgetRef.current) as CustomIndicator
-				]);
-			},
+			studies_overrides: defaultProps.studiesOverrides
 		};
 
 		const tvWidget = new widget(widgetOptions);
-		tvWidgetRef.current = tvWidget;
+		// tvWidgetRef.current = tvWidget;
 		tvWidget.onChartReady(() => {
-			tvWidget.headerReady().then(() => {
+			tvWidget.chart().onIntervalChanged().subscribe(null, (interval) => {
+				currentResolution.current = interval;
 				applyIndicatorLogic(tvWidget);
+			});
+			tvWidget.headerReady().then(() => {
 				const button = tvWidget.createButton();
 				button.setAttribute('title', 'Click to show a notification popup');
 				button.classList.add('apply-common-tooltip');
@@ -145,18 +133,21 @@ export const TVChartContainer = () => {
 		return () => {
 			tvWidget.remove();
 		};
-	}, [legStartTimestamps]);
+	});
+
+	const handleIndicatorChange = (indicator: string) => {
+		setSelectedIndicator(indicator);
+	};
 
 	return (
-		<div>
+		<>
 			<div>
 				<select onChange={ (e) => handleIndicatorChange(e.target.value) }>
 					<option value="">Select Indicator</option>
-					<option value="arrow">Arrow Indicator</option>
-					<option value="line">Line Indicator</option>
+					<option value="imbalances">Arrow Indicator - Imbalances</option>
 				</select>
 			</div>
 			<div ref={ chartContainerRef } className={ 'TVChartContainer' } />
-		</div>
+		</>
 	);
 };
