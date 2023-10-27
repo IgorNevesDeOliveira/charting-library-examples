@@ -1,13 +1,12 @@
 import * as React from 'react';
-import { useEffect, useRef, useState } from 'react';
 import './index.css';
 import {
-	ChartingLibraryWidgetOptions,
-	IChartingLibraryWidget,
+	ChartingLibraryWidgetOptions, IChartingLibraryWidget,
 	LanguageCode,
 	ResolutionString,
 	widget,
 } from '../../charting_library';
+import { useEffect, useRef, useState } from 'react';
 
 export interface ChartContainerProps {
 	symbol: ChartingLibraryWidgetOptions['symbol'];
@@ -25,7 +24,6 @@ export interface ChartContainerProps {
 	studiesOverrides: ChartingLibraryWidgetOptions['studies_overrides'];
 	container: ChartingLibraryWidgetOptions['container'];
 }
-
 const getLanguageFromURL = (): LanguageCode | null => {
 	const regex = new RegExp('[\\?&]lang=([^&#]*)');
 	const results = regex.exec(location.search);
@@ -33,45 +31,9 @@ const getLanguageFromURL = (): LanguageCode | null => {
 };
 
 export const TVChartContainer = () => {
-	const chartContainerRef = useRef<HTMLDivElement>() as React.MutableRefObject<HTMLInputElement>;
-
+	const chartContainerRef = useRef<HTMLDivElement>(null);
 	const [selectedIndicator, setSelectedIndicator] = useState('');
-	// const tvWidgetRef = useRef<IChartingLibraryWidget | null>(null);
-
-	/* eslint-disable align */
-	// const signalTimestamps = useRef<Set<number>>(new Set());
 	const currentResolution = useRef<string>('');
-
-	const applyIndicatorLogic = (tvWidget: IChartingLibraryWidget) => {
-		switch (selectedIndicator) {
-			case 'imbalances':
-				tvWidget.chart().removeAllShapes();
-				fetch(`http://localhost:8090/signal?signalName=${selectedIndicator}&resolution=${currentResolution.current}`)
-					.then((response) => response.json())
-					.then((result) => {
-						return new Set(Object.values(result).map(Number));
-					}).then((timestampList) => {
-					timestampList.forEach(timestamp => {
-						console.log(timestamp);
-						tvWidget.chart().createShape(
-							{time: timestamp / 1000},
-							{
-								shape: 'arrow_down',
-								text: 'Arrow!'
-							}
-						);
-					});
-				});
-				break;
-			default:
-				console.warn(`Unknown indicator: ${selectedIndicator}`);
-		}
-	};
-
-	// useEffect(() => {
-	// 	console.log('test');
-	// 	applyIndicatorLogic(tvWidgetRef.current);
-	// }, [selectedIndicator]);
 
 	const defaultProps: Omit<ChartContainerProps, 'container'> = {
 		symbol: 'US500',
@@ -87,6 +49,26 @@ export const TVChartContainer = () => {
 		studiesOverrides: {},
 	};
 
+	function createSignal(tvWidget: IChartingLibraryWidget) {
+		if (selectedIndicator === 'imbalances') {
+			tvWidget.chart().removeAllShapes();
+			fetch(`http://localhost:8090/signal?signalName=${selectedIndicator}&resolution=${currentResolution.current}`)
+				.then(response => response.json())
+				.then(result => new Set(Object.values(result).map(Number)))
+				.then(timestampList => {
+					timestampList.forEach(timestamp => {
+						tvWidget.chart().createShape(
+							{time: timestamp / 1000},
+							{
+								shape: 'arrow_down',
+								text: '1D-SI'
+							}
+						);
+					});
+				});
+		}
+	}
+
 	useEffect(() => {
 		const widgetOptions: ChartingLibraryWidgetOptions = {
 			symbol: defaultProps.symbol as string,
@@ -94,7 +76,7 @@ export const TVChartContainer = () => {
 			// tslint:disable-next-line:no-any
 			datafeed: new (window as any).Datafeeds.UDFCompatibleDatafeed(defaultProps.datafeedUrl),
 			interval: defaultProps.interval as ChartingLibraryWidgetOptions['interval'],
-			container: chartContainerRef.current,
+			container: chartContainerRef.current as HTMLDivElement,
 			library_path: defaultProps.libraryPath as string,
 			locale: getLanguageFromURL() || 'en',
 			disabled_features: ['use_localstorage_for_settings'],
@@ -109,24 +91,10 @@ export const TVChartContainer = () => {
 		};
 
 		const tvWidget = new widget(widgetOptions);
-		// tvWidgetRef.current = tvWidget;
 		tvWidget.onChartReady(() => {
-			tvWidget.chart().onIntervalChanged().subscribe(null, (interval) => {
+			tvWidget.chart().onIntervalChanged().subscribe(null, interval => {
 				currentResolution.current = interval;
-				applyIndicatorLogic(tvWidget);
-			});
-			tvWidget.headerReady().then(() => {
-				const button = tvWidget.createButton();
-				button.setAttribute('title', 'Click to show a notification popup');
-				button.classList.add('apply-common-tooltip');
-				button.addEventListener('click', () => tvWidget.showNoticeDialog({
-					title: 'Notification',
-					body: 'TradingView Charting Library API works correctly',
-					callback: () => {
-						console.log('Noticed!');
-					},
-				}));
-				button.innerHTML = 'Check API';
+				createSignal(tvWidget);
 			});
 		});
 
@@ -135,19 +103,19 @@ export const TVChartContainer = () => {
 		};
 	});
 
-	const handleIndicatorChange = (indicator: string) => {
-		setSelectedIndicator(indicator);
+	const handleIndicatorChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+		setSelectedIndicator(event.target.value);
 	};
 
 	return (
 		<>
 			<div>
-				<select onChange={ (e) => handleIndicatorChange(e.target.value) }>
+				<select onChange={ handleIndicatorChange }>
 					<option value="">Select Indicator</option>
 					<option value="imbalances">Arrow Indicator - Imbalances</option>
 				</select>
 			</div>
-			<div ref={ chartContainerRef } className={ 'TVChartContainer' } />
+			<div ref={ chartContainerRef } className="TVChartContainer" />
 		</>
 	);
 };
